@@ -8,14 +8,17 @@
 vec3 color(const ray &r, hitable *world, int depth)
 {
   hit_record rec;
-  if (world->hit(r, 0.01, MAXFLOAT, rec))
+  if (world->hit(r, 0.001, MAXFLOAT, rec))
   {
     ray scattered;
     vec3 attenuation;
-    if(depth < 50 && rec.mat_ptr->scatter(r, rec, attenuation, scattered)){
-      return color(scattered, world, depth+1);
-    } else{
-      return vec3(0,0,0);
+    if (depth < 50 && rec.mat_ptr->scatter(r, rec, attenuation, scattered))
+    {
+      return attenuation * color(scattered, world, depth + 1);
+    }
+    else
+    {
+      return vec3(0, 0, 0);
     }
   }
   else
@@ -28,8 +31,8 @@ vec3 color(const ray &r, hitable *world, int depth)
 
 int main()
 {
-  int nx = 200;
-  int ny = 100;
+  int nx = 800;
+  int ny = 400;
   int ns = 100;
 
   std::cout << "P3\n"
@@ -37,9 +40,9 @@ int main()
 
   hitable *list[4];
   list[0] = new sphere(vec3(0, 0, -1), 0.5, new lambertian(vec3(0.8, 0.3, 0.3)));
-  list[1] = new sphere(vec3(0, -100.5, -1), 100, new lambertian(vec3(0.8, 0.3, 0.0)));
-  list[2] = new sphere(vec3(1, 0, -1), 0.5, new metal(vec3(0.8, 0.6, 0.2)));
-  list[3] = new sphere(vec3(-1, 0, -1), 0.5, new metal(vec3(0.8, 0.6, 0.2)));
+  list[1] = new sphere(vec3(0, -100.5, -1), 100, new lambertian(vec3(0.8, 0.8, 0.0)));
+  list[2] = new sphere(vec3(1, 0, -1), 0.5, new metal(vec3(0.8, 0.6, 0.2), 0.3));
+  list[3] = new sphere(vec3(-1, 0, -1), 0.5, new dialectric(1.5));
 
   hitable *world = new hitable_list(list, 4);
   camera cam;

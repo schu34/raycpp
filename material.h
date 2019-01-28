@@ -1,15 +1,7 @@
 #ifndef MATERIALH
 #define MATERIALH
 
-vec3 random_in_unit_sphere()
-{
-  vec3 p;
-  do
-  {
-    p = 2.0 * vec3(drand48(), drand48(), drand48()) - vec3(1, 1, 1);
-  } while (p.squared_length() >= 1);
-  return p;
-}
+#include "material_util.h"
 
 class material
 {
@@ -31,22 +23,58 @@ public:
   vec3 albedo;
 };
 
-vec3 reflect(const vec3 &v, const vec3 &n)
-{
-  return v - 2 * dot(v, n) * n;
-}
 class metal : public material
 {
 public:
-  metal(const vec3 &a) : albedo(a) {}
+  metal(const vec3 &a, float f) : albedo(a)
+  {
+    fuzz = f > 1 ? f : 1;
+  }
+
   virtual bool scatter(const ray &r_in, const hit_record &rec, vec3 &attenuation, ray &scattered) const
   {
     vec3 reflected = reflect(unit_vector(r_in.direction()), rec.normal);
-    scattered = ray(rec.p, reflected);
+    scattered = ray(rec.p, reflected + fuzz * random_in_unit_sphere());
     attenuation = albedo;
     return (dot(scattered.direction(), rec.normal) > 0);
   }
   vec3 albedo;
+  float fuzz;
 };
 
+class dialectric : public material
+{
+public:
+  dialectric(float ri) : ref_idx(ri) {}
+  virtual bool scatter(const ray &r_in, const hit_record &rec, vec3 &attenuation, ray &scattered) const
+  {
+    vec3 outward_normal;
+    vec3 reflected = reflect(r_in.direction(), rec.normal);
+    float ni_over_nt;
+    attenuation = vec3(1.0, 1.0, 1.0);
+    vec3 refracted;
+    if (dot(r_in.direction(), rec.normal) > 0)
+    {
+      outward_normal = -rec.normal;
+      ni_over_nt = ref_idx;
+    }
+    else
+    {
+      outward_normal = rec.normal;
+      ni_over_nt = 1 / ref_idx;
+    }
+
+    if (refract(r_in.direction(), outward_normal, ni_over_nt, refracted))
+    {
+      scattered = ray(rec.p, refracted);
+    }
+    else
+    {
+      scattered = ray(rec.p, reflected);
+      return false;
+    }
+    return true;
+  }
+  float ref_idx;
+};
 #endif
